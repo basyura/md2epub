@@ -4,7 +4,6 @@ module Md2Epub
   class ImageFetcher
 
     def initialize( tmpdir , resourcedir)
-      @text        = []
       @resourcedir = resourcedir
       @imagedir    = tmpdir + "/OEBPS/images/"
       @imglist     = []

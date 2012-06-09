@@ -117,6 +117,8 @@ module Md2Epub
       end
     end   
 
+    private
+
     def _copy_asset_files
       FileUtils.copy(@config.assetdir + "mimetype", @config.tmpdir)
       FileUtils.cp_r(Dir.glob( @config.assetdir + "META-INF"), @config.tmpdir)
