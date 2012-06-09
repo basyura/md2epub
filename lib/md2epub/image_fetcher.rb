@@ -5,9 +5,7 @@ module Md2Epub
 
     def initialize( tmpdir , resourcedir)
       @text        = []
-      @basedir     = resourcedir
-      @resourcedir = @basedir
-      @assetdir    = File.dirname(__FILE__) + '/../../assets/'
+      @resourcedir = resourcedir
       @imagedir    = tmpdir + "/OEBPS/images/"
       @imglist     = []
       FileUtils.makedirs(@imagedir)
