@@ -2,4 +2,14 @@
 #-*- coding: utf-8 -*-
 $:.unshift(File.dirname(__FILE__) + '/../lib/')
 
-puts "hello"
+require 'md2epub'
+
+epub = Md2Epub::Markdown2EPUB.new
+unless ARGV[0].nil? then
+  if File.exists?(ARGV[0]) then
+    epub.set_dir( File.realdirpath( ARGV[0] ) )
+    epub.build
+  else
+    puts %Q(Directory not exist: #{ARGV[0]})
+  end
+end

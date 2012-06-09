@@ -4,8 +4,8 @@ require File.expand_path('../lib/md2epub/version', __FILE__)
 Gem::Specification.new do |gem|
   gem.authors       = ["basyura"]
   gem.email         = ["basyura@gmail.com"]
-  gem.description   = %q{TODO: Write a gem description}
-  gem.summary       = %q{TODO: Write a gem summary}
+  gem.description   = %q{convert from md to epub}
+  gem.summary       = %q{convert from md to epub}
   gem.homepage      = ""
 
   gem.files         = `git ls-files`.split($\)
