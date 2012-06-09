@@ -33,18 +33,44 @@ module Md2Epub
       images = ImageFetcher.new( @config.tmpdir, @config.resourcedir )
 
       # copy Asset Files
-      _copy_asset_files()
+      _copy_asset_files
 
       # copy Resource Images
-      _copy_images()
+      _copy_images
 
       # make HTML directory
       contentdir = @config.tmpdir + "/OEBPS/text"
-      FileUtils.mkdir( contentdir )
+      FileUtils.mkdir contentdir
 
       # markdown to HTML
-      get_title = Regexp.new('^[#=] (.*)$')
+      md_files_to_html rndr, images, contentdir
 
+      # textile to HTML
+      textile_to_html rndr, images, contentdir
+
+      # sort by filename
+      @config.pages.sort! { |a, b| a[:file] <=> b[:file] }
+
+      # build EPUB meta files
+      _build_opf
+      _build_toc
+
+      # build cover page
+      _build_cover
+
+      # ZIP!
+      make_epub @config.tmpdir, @config.bookname
+
+      # delete working directory
+      unless @config.debug then
+        FileUtils.remove_entry_secure @config.tmpdir
+      end
+    end   
+
+    private
+
+    def md_files_to_html(rndr, images, contentdir)
+      get_title = Regexp.new('^[#=] (.*)$')
       @config.md_files.each do |file|
         # puts "#{file}: #{File::stat(file).size} bytes"
         md = File.read( file )
@@ -69,10 +95,10 @@ module Md2Epub
 
         @config.pages.push page
       end           
+    end
 
-      # textile to HTML
+    def textile_to_html(rndr, images, contentdir)
       get_title = Regexp.new('^h1. (.*)$')
-
       @config.tx_files.each do |file|
         # puts "#{file}: #{File::stat(file).size} bytes"
         textile = File.read( file )
@@ -98,26 +124,7 @@ module Md2Epub
         @config.pages.push page
       end
 
-      # sort by filename
-      @config.pages.sort! {|a, b| a[:file] <=> b[:file]}
-
-      # build EPUB meta files
-      _build_opf()
-      _build_toc()
-
-      # build cover page
-      _build_cover()
-
-      # ZIP!
-      make_epub( @config.tmpdir , @config.bookname )
-
-      # delete working directory
-      unless @config.debug then
-        FileUtils.remove_entry_secure(@config.tmpdir)
-      end
-    end   
-
-    private
+    end
 
     def _copy_asset_files
       FileUtils.copy(@config.assetdir + "mimetype", @config.tmpdir)
