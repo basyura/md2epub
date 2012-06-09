@@ -27,4 +27,4 @@ lang: ja
 
 # Debug
 # trueの場合生成した一時ファイルを残します
-debug: true
+debug: false
