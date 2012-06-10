@@ -4,8 +4,7 @@ module Md2Epub
   class Config
     attr_accessor :md_files, :tx_files,
                   :booktitle, :bookname, :uuid, :aut, :publisher, :pubdate,
-                  :basedir, :resourcedir, :assetdir, :tmpdir, :contentdir,
-                  :debug
+                  :directories, :debug
 
     def initialize(conf, path)
       @bookname    = conf['bookname'] || 'md2epub'
@@ -14,11 +13,7 @@ module Md2Epub
       @lang        = conf['lang']
       @publisher   = conf['publisher']
       @debug       = conf['debug']
-      @resourcedir = Dir.pwd
-      @assetdir    = File.dirname(__FILE__) + '/../../assets/'
-      @tmpdir      = Dir.mktmpdir("md2epub", Dir.pwd)
-      @contentdir  = @tmpdir + '/OEBPS/text'
-
+      @directories = Directories.new
 
       if conf.key?('uuid') then
         @uuid = UUIDTools::UUID.sha1_create(UUID_DNS_NAMESPACE, conf['uuid']).to_s
@@ -36,6 +31,16 @@ module Md2Epub
         @tx_files = [path]
       else
         raise ArgumentError.new('wrong path : ' + path)
+      end
+    end
+
+    class Directories
+      attr_reader :resource, :asset, :tmp, :content
+      def initialize
+        @resource = Dir.pwd
+        @asset    = File.dirname(__FILE__) + '/../../assets/'
+        @tmp      = Dir.mktmpdir("md2epub", Dir.pwd)
+        @content  = @tmp + '/OEBPS/text'
       end
     end
   end
