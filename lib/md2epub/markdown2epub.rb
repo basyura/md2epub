@@ -65,8 +65,8 @@ module Md2Epub
 
     def build_epub(bookname, pages, dir)
       # build EPUB meta files
-      build_opf(pages, dir)
-      build_toc(pages, dir)
+      build_opf(pages, dir.asset, dir.tmp)
+      build_toc(pages, dir.asset, dir.tmp)
       # build cover page
       build_cover(pages, dir)
       # ZIP!
@@ -165,11 +165,11 @@ module Md2Epub
       end
     end
 
-    def build_opf(pages, dir)
-      erbfile = dir.asset + 'content.opf.erb'
+    def build_opf(pages, assetdir, tmpdir)
+      erbfile = assetdir + 'content.opf.erb'
 
       imagelist = []        
-      Dir.glob(dir.tmp + '/OEBPS/images/*') do |img|
+      Dir.glob(tmpdir + '/OEBPS/images/*') do |img|
         imagelist.push({
           :fname =>  File.basename(img),
           :mediatype => MIME::Types.type_for(img)[0].to_s 
@@ -178,17 +178,17 @@ module Md2Epub
 
       open(erbfile, 'r') do |erb|
         opf = ERB.new(erb.read , nil, '-').result(binding)
-        open(dir.tmp + '/OEBPS/content.opf', 'w') do |f|
+        open(tmpdir + '/OEBPS/content.opf', 'w') do |f|
           f.write(opf)
         end
       end
     end
 
-    def build_toc(pages, dir)
-      erbfile = dir.asset + 'toc.xhtml.erb'
+    def build_toc(pages, assetdir, tmpdir)
+      erbfile = assetdir + 'toc.xhtml.erb'
       open(erbfile, 'r') do |erb|
         html = ERB.new(erb.read , nil, '-').result(binding)
-        open(dir.tmp + '/OEBPS/toc.xhtml', 'w') do |f|
+        open(tmpdir + '/OEBPS/toc.xhtml', 'w') do |f|
           f.write( html )
         end
       end
