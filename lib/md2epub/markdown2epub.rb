@@ -12,26 +12,26 @@ module Md2Epub
     def build
       puts %Q(BUILD::#{@config.resourcedir})
       # setup files
-      setup
+      setup(@config.contentdir, @config.assetdir, @config.resourcedir, @config.tmpdir)
       # convert to html from md and textile
-      to_html
+      pages = to_html(@config.resourcedir, @config.contentdir, @config.tmpdir, @config.md_files, @config.tx_files)
       # generate epub
-      build_epub
+      build_epub(@config.bookname, pages, @config.assetdir, @config.resourcedir, @config.tmpdir)
       # optional process
-      post_process
+      post_process(@config.tmpdir)
     end   
 
     private
 
-    def setup
+    def setup(contentdir, assetdir, resourcedir, tmpdir)
       # copy
-      copy_asset_files
-      copy_images
+      copy_asset_files(assetdir, tmpdir)
+      copy_images(resourcedir, tmpdir)
       # make HTML directory
-      FileUtils.mkdir(@config.contentdir)
+      FileUtils.mkdir(contentdir)
     end
 
-    def to_html
+    def to_html(resourcedir, contentdir, tmpdir, md_files, tx_files)
       # markdown Render options
       options = [
         :autolink            => true,
@@ -50,36 +50,37 @@ module Md2Epub
       ]
       rndr   = Redcarpet::Markdown.new(Redcarpet::Render::XHTML, *options)
       # Fetch Image Class
-      images = ImageFetcher.new(@config.tmpdir, @config.resourcedir)
+      images = ImageFetcher.new(tmpdir, resourcedir)
 
       # markdown to HTML
-      md_files_to_html rndr, images
-      # textile to HTML
-      textile_to_html rndr, images
+      pages = md_files_to_html(rndr, images, md_files, contentdir)
+      # textile tos HTML
+      pages = pages + textile_to_html(rndr, images, tx_files, contentdir)
       # sort by filename
-      @config.pages.sort! { |a, b| a[:file] <=> b[:file] }
+      pages.sort! { |a, b| a[:file] <=> b[:file] }
+      pages
     end
 
-    def build_epub
+    def build_epub(bookname, pages, assetdir, resourcedir, tmpdir)
       # build EPUB meta files
-      build_opf
-      build_toc
+      build_opf(pages, assetdir, tmpdir)
+      build_toc(pages, assetdir, tmpdir)
       # build cover page
-      build_cover
+      build_cover(pages, assetdir, tmpdir)
       # ZIP!
-      make_epub
+      make_epub(bookname, tmpdir, resourcedir)
     end
 
-    def post_process
+    def post_process(tmpdir, debug = false)
       # delete working directory
-      unless @config.debug
-        FileUtils.remove_entry_secure @config.tmpdir
+      unless debug
+        FileUtils.remove_entry_secure tmpdir
       end
     end
 
-    def md_files_to_html(rndr, images)
+    def md_files_to_html(rndr, images, files, contentdir)
       get_title = Regexp.new('^[#=] (.*)$')
-      @config.md_files.each do |file|
+      pages = files.inject([]) do |pages, file|
         # puts "#{file}: #{File::stat(file).size} bytes"
         md = File.read( file )
         html =""
@@ -99,15 +100,16 @@ module Md2Epub
 
         # Fetch Images and replace src path
         html = images.fetch( html )
-        build_page( page, html, %Q(#{@config.contentdir}/#{fname}) )
+        build_page( page, html, %Q(#{contentdir}/#{fname}) )
 
-        @config.pages.push page
+        pages.push page
       end           
+      pages
     end
 
-    def textile_to_html(rndr, images)
+    def textile_to_html(rndr, images, files, contentdir)
       get_title = Regexp.new('^h1. (.*)$')
-      @config.tx_files.each do |file|
+      pages = files.inject([]) do |pages, file|
         # puts "#{file}: #{File::stat(file).size} bytes"
         textile = File.read( file )
         html    =""
@@ -127,32 +129,30 @@ module Md2Epub
 
         # Fetch Images and replace src path
         html = images.fetch( html )
-        build_page( page, html, %Q(#{@config.contentdir}/#{fname}) )
+        build_page( page, html, %Q(#{contentdir}/#{fname}) )
 
-        @config.pages.push page
+        pages.push page
       end
-
+      pages
     end
 
-    def copy_asset_files
-      FileUtils.copy(@config.assetdir + "mimetype", @config.tmpdir)
-      FileUtils.cp_r(Dir.glob( @config.assetdir + "META-INF"), @config.tmpdir)
-      FileUtils.cp_r(Dir.glob( @config.assetdir + "OEBPS"), @config.tmpdir)
+    def copy_asset_files(assetdir, tmpdir)
+      FileUtils.copy(assetdir + 'mimetype', tmpdir)
+      FileUtils.cp_r(Dir.glob(assetdir + 'META-INF'), tmpdir)
+      FileUtils.cp_r(Dir.glob(assetdir + 'OEBPS'   ), tmpdir)
     end    
 
 
-    def copy_images
-      origin_imagedir = @config.resourcedir + "/images"
+    def copy_images(resourcedir, tmpdir)
+      origin_imagedir = resourcedir + "/images"
       if File.exists?( origin_imagedir )
-        epub_imagedir = @config.tmpdir + "/OEBPS/"
+        epub_imagedir = tmpdir + "/OEBPS/"
         FileUtils.makedirs( epub_imagedir )
         FileUtils.cp_r(Dir.glob( origin_imagedir ), epub_imagedir)
       end
     end
 
-
-    def build_page( page, pagebody, file )
-      html      = ""
+    def build_page(page, pagebody, file)
       pagetitle = page[:pagetitle]        
       erbfile   = @config.assetdir + "page.xhtml.erb"
 
@@ -164,13 +164,11 @@ module Md2Epub
       end
     end
 
-    def build_opf
-      opf     = ""
-      pages   = @config.pages
-      erbfile = @config.assetdir + "content.opf.erb"
+    def build_opf(pages, assetdir, tmpdir)
+      erbfile = assetdir + 'content.opf.erb'
 
       imagelist = []        
-      Dir.glob( @config.tmpdir + "/OEBPS/images/*" ) do |img|
+      Dir.glob(tmpdir + '/OEBPS/images/*') do |img|
         imagelist.push({
           :fname =>  File.basename(img),
           :mediatype => MIME::Types.type_for(img)[0].to_s 
@@ -178,54 +176,47 @@ module Md2Epub
       end
 
       open(erbfile, 'r') do |erb|
-        opf = ERB.new( erb.read , nil, '-').result(binding)
-        open( @config.tmpdir + "/OEBPS/content.opf", "w") do |f|
-          f.write( opf )
+        opf = ERB.new(erb.read , nil, '-').result(binding)
+        open(tmpdir + '/OEBPS/content.opf', 'w') do |f|
+          f.write(opf)
         end
       end
     end
 
-
-    def build_toc
-      html    = ""
-      pages   = @config.pages
-      erbfile = @config.assetdir + "toc.xhtml.erb"
-
+    def build_toc(pages, assetdir, tmpdir)
+      erbfile = assetdir + 'toc.xhtml.erb'
       open(erbfile, 'r') do |erb|
-        html = ERB.new( erb.read , nil, '-').result(binding)
-        open( @config.tmpdir + "/OEBPS/toc.xhtml", "w") do |f|
+        html = ERB.new(erb.read , nil, '-').result(binding)
+        open(tmpdir + '/OEBPS/toc.xhtml', 'w') do |f|
           f.write( html )
         end
       end
     end    
 
-    def build_cover
-      html    = ""
-      pages   = @config.pages
-      erbfile = @config.assetdir + "cover.html.erb"
-
+    def build_cover(pages, assetdir, tmpdir)
+      erbfile = assetdir + 'cover.html.erb'
       open(erbfile, 'r') do |erb|
-        html = ERB.new( erb.read , nil, '-').result(binding)
-        open( @config.tmpdir + "/OEBPS/text/cover.xhtml", "w") do |f|
+        html = ERB.new(erb.read , nil, '-').result(binding)
+        open(tmpdir + '/OEBPS/text/cover.xhtml', 'w') do |f|
           f.write( html )
         end
       end
     end       
 
-    def make_epub
+    def make_epub(bookname, tmpdir, resourcedir)
       fork do
-        Dir.chdir(@config.tmpdir) do |d|
-          exec("zip", "-0X", "#{@config.bookname}", "mimetype")
+        Dir.chdir(tmpdir) do |d|
+          exec("zip", "-0X", "#{bookname}", "mimetype")
         end
       end
       Process.waitall
       fork do
-        Dir.chdir(@config.tmpdir) do |d|
-          exec("zip -Xr9D #{@config.bookname}" + ' * -x "*.DS_Store" -x mimetype META-INF OEBPS')
+        Dir.chdir(tmpdir) do |d|
+          exec("zip -Xr9D #{bookname}" + ' * -x "*.DS_Store" -x mimetype META-INF OEBPS')
         end
       end
       Process.waitall
-      FileUtils.cp( %Q(#{@config.tmpdir}/#{@config.bookname}), @config.resourcedir)
+      FileUtils.cp( %Q(#{tmpdir}/#{bookname}), resourcedir)
     end
   end
 end
