@@ -4,7 +4,8 @@ module Md2Epub
   class Config
     attr_accessor :md_files, :tx_files,
                   :booktitle, :bookname, :uuid, :aut, :publisher, :pubdate,
-                  :basedir, :resourcedir, :assetdir, :pages, :tmpdir, :debug
+                  :basedir, :resourcedir, :assetdir, :pages, :tmpdir, :contentdir,
+                  :debug
 
     def initialize(conf, path)
       @bookname    = conf['bookname'] || 'md2epub'
@@ -16,6 +17,7 @@ module Md2Epub
       @resourcedir = Dir.pwd
       @assetdir    = File.dirname(__FILE__) + '/../../assets/'
       @tmpdir      = Dir.mktmpdir("md2epub", Dir.pwd)
+      @contentdir  = @tmpdir + '/OEBPS/text'
       @pages       = []
 
 
