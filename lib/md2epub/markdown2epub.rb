@@ -11,14 +11,15 @@ module Md2Epub
 
     def build
       puts %Q(BUILD::#{@config.resourcedir})
+      conf = @config
       # setup files
-      setup(@config.contentdir, @config.assetdir, @config.resourcedir, @config.tmpdir)
+      setup(conf.contentdir, conf.assetdir, conf.resourcedir, conf.tmpdir)
       # convert to html from md and textile
-      pages = to_html(@config.resourcedir, @config.contentdir, @config.tmpdir, @config.md_files, @config.tx_files)
+      pages = to_html(conf.resourcedir, conf.contentdir, conf.tmpdir, conf.md_files, conf.tx_files)
       # generate epub
-      build_epub(@config.bookname, pages, @config.assetdir, @config.resourcedir, @config.tmpdir)
+      build_epub(conf.bookname, pages, conf.assetdir, conf.resourcedir, conf.tmpdir)
       # optional process
-      post_process(@config.tmpdir)
+      post_process(conf.tmpdir)
     end   
 
     private
