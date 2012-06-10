@@ -15,7 +15,7 @@ module Md2Epub
       # setup files
       setup(conf.contentdir, conf.assetdir, conf.resourcedir, conf.tmpdir)
       # convert to html from md and textile
-      pages = to_html(conf.resourcedir, conf.contentdir, conf.tmpdir, conf.md_files, conf.tx_files)
+      pages = to_html(conf.resourcedir, conf.contentdir, conf.assetdir, conf.tmpdir, conf.md_files, conf.tx_files)
       # generate epub
       build_epub(conf.bookname, pages, conf.assetdir, conf.resourcedir, conf.tmpdir)
       # optional process
@@ -32,7 +32,7 @@ module Md2Epub
       FileUtils.mkdir(contentdir)
     end
 
-    def to_html(resourcedir, contentdir, tmpdir, md_files, tx_files)
+    def to_html(resourcedir, contentdir, assetdir, tmpdir, md_files, tx_files)
       # markdown Render options
       options = [
         :autolink            => true,
@@ -54,9 +54,9 @@ module Md2Epub
       images = ImageFetcher.new(tmpdir, resourcedir)
 
       # markdown to HTML
-      pages = md_files_to_html(rndr, images, md_files, contentdir)
+      pages = md_files_to_html(rndr, images, md_files, contentdir, assetdir)
       # textile tos HTML
-      pages = pages + textile_to_html(rndr, images, tx_files, contentdir)
+      pages = pages + textile_to_html(rndr, images, tx_files, contentdir, assetdir)
       # sort by filename
       pages.sort! { |a, b| a[:file] <=> b[:file] }
       pages
@@ -79,7 +79,7 @@ module Md2Epub
       end
     end
 
-    def md_files_to_html(rndr, images, files, contentdir)
+    def md_files_to_html(rndr, images, files, contentdir, assetdir)
       get_title = Regexp.new('^[#=] (.*)$')
       pages = files.inject([]) do |pages, file|
         # puts "#{file}: #{File::stat(file).size} bytes"
@@ -101,14 +101,14 @@ module Md2Epub
 
         # Fetch Images and replace src path
         html = images.fetch( html )
-        build_page( page, html, %Q(#{contentdir}/#{fname}) )
+        build_page(page, html, %Q(#{contentdir}/#{fname}), assetdir)
 
         pages.push page
       end           
       pages
     end
 
-    def textile_to_html(rndr, images, files, contentdir)
+    def textile_to_html(rndr, images, files, contentdir, assetdir)
       get_title = Regexp.new('^h1. (.*)$')
       pages = files.inject([]) do |pages, file|
         # puts "#{file}: #{File::stat(file).size} bytes"
@@ -130,8 +130,7 @@ module Md2Epub
 
         # Fetch Images and replace src path
         html = images.fetch( html )
-        build_page( page, html, %Q(#{contentdir}/#{fname}) )
-
+        build_page(page, html, %Q(#{contentdir}/#{fname}), assetdir)
         pages.push page
       end
       pages
@@ -153,9 +152,9 @@ module Md2Epub
       end
     end
 
-    def build_page(page, pagebody, file)
+    def build_page(page, pagebody, file, assetdir)
       pagetitle = page[:pagetitle]        
-      erbfile   = @config.assetdir + "page.xhtml.erb"
+      erbfile   = assetdir + "page.xhtml.erb"
 
       open(erbfile, 'r') do |erb|
         html = ERB.new( erb.read , nil, '-').result(binding)
