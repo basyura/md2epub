@@ -73,11 +73,9 @@ module Md2Epub
       make_epub(bookname, dir)
     end
 
-    def post_process(dir, debug = false)
+    def post_process(dir)
       # delete working directory
-      unless debug
-        FileUtils.remove_entry_secure dir.tmp
-      end
+      FileUtils.remove_entry_secure dir.tmp
     end
 
     def md_files_to_html(rndr, images, files, dir)
@@ -85,25 +83,23 @@ module Md2Epub
       pages = files.inject([]) do |pages, file|
         # puts "#{file}: #{File::stat(file).size} bytes"
         md = File.read( file )
-        html =""
 
         get_title =~ md
         if $1
           pagetitle = $1.chomp
-          md[ get_title ] = ""
+          md[get_title] = ""
         else 
           pagetitle = File.basename(file, ".*")
         end
         fname = File.basename(file, ".md") << ".xhtml"
-        page = {:pagetitle => pagetitle, :file => fname }                
+        page  = {:pagetitle => pagetitle, :file => fname }                
 
         # render markdown
-        html = rndr.render( md )
-
+        html = rndr.render(md)
         # Fetch Images and replace src path
-        html = images.fetch( html )
-        build_page(page, html, %Q(#{dir.content}/#{fname}), dir.asset)
+        html = images.fetch(html)
 
+        build_page(page, html, %Q(#{dir.content}/#{fname}), dir.asset)
         pages.push page
       end           
       pages
@@ -114,7 +110,6 @@ module Md2Epub
       pages = files.inject([]) do |pages, file|
         # puts "#{file}: #{File::stat(file).size} bytes"
         textile = File.read( file )
-        html    =""
 
         get_title =~ textile
         if $1
@@ -124,13 +119,13 @@ module Md2Epub
           pagetitle = File.basename(file, ".*")
         end
         fname = File.basename(file, ".textile") << ".xhtml"
-        page = {:pagetitle => pagetitle, :file => fname }                
+        page  = {:pagetitle => pagetitle, :file => fname }                
 
         # render textile
         html = RedCloth.new( textile ).to_html            
-
         # Fetch Images and replace src path
         html = images.fetch( html )
+
         build_page(page, html, %Q(#{dir.content}/#{fname}), dir.asset)
         pages.push page
       end
@@ -167,17 +162,17 @@ module Md2Epub
 
     def build_opf(pages, assetdir, tmpdir)
       erbfile = assetdir + 'content.opf.erb'
-
+      # imagelist is used in erb
       imagelist = []        
       Dir.glob(tmpdir + '/OEBPS/images/*') do |img|
         imagelist.push({
-          :fname =>  File.basename(img),
+          :fname     =>  File.basename(img),
           :mediatype => MIME::Types.type_for(img)[0].to_s 
         })
       end
 
       open(erbfile, 'r') do |erb|
-        opf = ERB.new(erb.read , nil, '-').result(binding)
+        opf = ERB.new(erb.read, nil, '-').result(binding)
         open(tmpdir + '/OEBPS/content.opf', 'w') do |f|
           f.write(opf)
         end
@@ -217,7 +212,7 @@ module Md2Epub
         end
       end
       Process.waitall
-      FileUtils.cp( %Q(#{dir.tmp}/#{bookname}), dir.resource)
+      FileUtils.cp(%Q(#{dir.tmp}/#{bookname}), dir.resource)
     end
   end
 end
