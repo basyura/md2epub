@@ -153,7 +153,7 @@ module Md2Epub
       erbfile   = assetdir + "page.xhtml.erb"
 
       open(erbfile, 'r') do |erb|
-        html = ERB.new( erb.read , nil, '-').result(binding)
+        html = ERB.new(erb.read , nil, '-').result(binding)
         open( file, "w") do |f|
           f.write( html )
         end

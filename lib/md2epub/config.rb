@@ -3,7 +3,7 @@ module Md2Epub
 
   class Config
     attr_accessor :md_files, :tx_files,
-                  :booktitle, :bookname, :aut, :publisher,
+                  :booktitle, :bookname, :uuid, :aut, :publisher, :pubdate, :lang,
                   :directories
 
     def initialize(conf, path)
@@ -12,8 +12,16 @@ module Md2Epub
       @bookname    = conf['bookname'] || 'md2epub'
       @booktitle   = conf['booktitle']
       @aut         = conf['aut']
+      @lang        = conf['lang']
       @publisher   = conf['publisher']
       @directories = Directories.new(path, tmpdir)
+
+      if conf.key?('uuid') then
+        @uuid = UUIDTools::UUID.sha1_create(UUID_DNS_NAMESPACE, conf['uuid']).to_s
+      else
+        @uuid = UUIDTools::UUID.random_create.to_s
+      end
+      @pubdate = conf.key?('pubdate') ? conf['pubdate'] : Time.now.gmtime.iso8601
 
       if File.directory?(path)
         @md_files = Dir::glob("#{path}/*.{md,mkd,markdown}")
